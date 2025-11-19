@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registrar Horas Extra</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 16px;
+      background: #f9f9f9;
+      font-size: 15px;
+      color: #333;
+    }
+    h2 {
+      color: #0F3A5A;
+      text-align: center;
+      margin-top: 0;
+    }
+    label {
+      display: block;
+      margin-top: 14px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    button {
+      margin-top: 16px;
+      padding: 12px;
+      background: #0F3A5A;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+      width: 100%;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+    .col { flex: 1; }
+    .message {
+      padding: 10px;
+      margin-top: 12px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+    .success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      display: none;
+    }
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      display: none;
+    }
+    .nuevo-input {
+      display: none;
+      margin-top: 8px;
+      padding: 10px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Registrar Horas Extra</h2>
+
+  <label>Trabajador:
+    <select id="trabajadorSel" onchange="toggleNuevoTrabajador()">
+      <option value="">— Seleccionar —</option>
+      <option value="_nuevo_">📝 Agregar nuevo</option>
+    </select>
+  </label>
+  <div id="nuevoTrabajadorDiv" class="nuevo-input">
+    <input type="text" id="nuevoTrabajadorInput" placeholder="Nombre completo" />
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <label>Fecha:
+        <input type="date" id="fecha" />
+      </label>
+    </div>
+    <div class="col">
+      <label>¿Almuerzo?
+        <select id="almuerzo">
+          <option value="SI">Sí</option>
+          <option value="NO">No</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <label>Entrada:
+        <input type="time" id="entrada" />
+      </label>
+    </div>
+    <div class="col">
+      <label>Salida:
+        <input type="time" id="salida" />
+      </label>
+    </div>
+  </div>
+
+  <label>Cliente:
+    <select id="clienteSel" onchange="toggleNuevoCliente()">
+      <option value="">— Seleccionar —</option>
+      <option value="_nuevo_">➕ Agregar nuevo</option>
+    </select>
+  </label>
+  <div id="nuevoClienteDiv" class="nuevo-input">
+    <input type="text" id="nuevoClienteInput" placeholder="Nombre del cliente" />
+  </div>
+
+  <label>Trabajo realizado:
+    <select id="trabajoSel" onchange="toggleNuevoTrabajo()">
+      <option value="">— Seleccionar —</option>
+      <option value="_nuevo_">➕ Agregar nuevo</option>
+    </select>
+  </label>
+  <div id="nuevoTrabajoDiv" class="nuevo-input">
+    <textarea id="nuevoTrabajoInput" placeholder="Descripción del trabajo"></textarea>
+  </div>
+
+  <button onclick="guardar()">✅ Guardar Registro</button>
+
+  <div id="msgSuccess" class="message success">✓ Registro guardado.</div>
+  <div id="msgError" class="message error"></div>
+
+  <script>
+    // 🔴 🔴 🔴 IMPORTANTE: Reemplaza esta URL por la de TU implementación de Apps Script
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmvrLWCEbjRiAKBXvH1yeXZfSc9-LY7tJ79KQAAgCzYRjNQLx85ov8YB4Uo-2YZnXp/exec";
+
+    // Establecer fecha de hoy
+    window.onload = function () {
+      const hoy = new Date();
+      document.getElementById("fecha").value = hoy.toISOString().substring(0, 10);
+      cargarListasIniciales();
+    };
+
+    // Cargar listas al iniciar (opcional: si quieres que cargue trabajadores/clientes al abrir)
+    function cargarListasIniciales() {
+      fetch(SCRIPT_URL + "?action=getLists")
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) return;
+          const tSel = document.getElementById("trabajadorSel");
+          const cSel = document.getElementById("clienteSel");
+          const trSel = document.getElementById("trabajoSel");
+
+          // Mantener las opciones base
+          const tHTML = tSel.innerHTML;
+          const cHTML = cSel.innerHTML;
+          const trHTML = trSel.innerHTML;
+
+          tSel.innerHTML = tHTML;
+          cSel.innerHTML = cHTML;
+          trSel.innerHTML = trHTML;
+
+          data.trabajadores?.forEach(t => {
+            const opt = document.createElement("option");
+            opt.value = t;
+            opt.textContent = t;
+            tSel.appendChild(opt);
+          });
+          data.clientes?.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c;
+            opt.textContent = c;
+            cSel.appendChild(opt);
+          });
+          data.trabajos?.forEach(t => {
+            const opt = document.createElement("option");
+            opt.value = t;
+            opt.textContent = t;
+            trSel.appendChild(opt);
+          });
+        })
+        .catch(err => console.warn("No se pudieron cargar listas:", err));
+    }
+
+    function toggleNuevoTrabajador() {
+      document.getElementById("nuevoTrabajadorDiv").style.display =
+        document.getElementById("trabajadorSel").value === "_nuevo_" ? "block" : "none";
+    }
+    function toggleNuevoCliente() {
+      document.getElementById("nuevoClienteDiv").style.display =
+        document.getElementById("clienteSel").value === "_nuevo_" ? "block" : "none";
+    }
+    function toggleNuevoTrabajo() {
+      document.getElementById("nuevoTrabajoDiv").style.display =
+        document.getElementById("trabajoSel").value === "_nuevo_" ? "block" : "none";
+    }
+
+    function showError(msg) {
+      const el = document.getElementById("msgError");
+      el.textContent = "⚠️ " + msg;
+      el.style.display = "block";
+    }
+
+    function resetCampos() {
+      document.getElementById("trabajadorSel").selectedIndex = 0;
+      document.getElementById("clienteSel").selectedIndex = 0;
+      document.getElementById("trabajoSel").selectedIndex = 0;
+      document.getElementById("entrada").value = "";
+      document.getElementById("salida").value = "";
+      document.getElementById("almuerzo").value = "SI";
+      toggleNuevoTrabajador();
+      toggleNuevoCliente();
+      toggleNuevoTrabajo();
+      document.getElementById("nuevoTrabajadorInput").value = "";
+      document.getElementById("nuevoClienteInput").value = "";
+      document.getElementById("nuevoTrabajoInput").value = "";
+    }
+
+    function guardar() {
+      const success = document.getElementById("msgSuccess");
+      const error = document.getElementById("msgError");
+      success.style.display = "none";
+      error.style.display = "none";
+
+      let trabajador = "";
+      const tSel = document.getElementById("trabajadorSel");
+      if (tSel.value === "_nuevo_") {
+        trabajador = document.getElementById("nuevoTrabajadorInput").value.trim();
+        if (!trabajador) { showError("Ingresa el nombre del trabajador."); return; }
+      } else {
+        trabajador = tSel.value;
+        if (!trabajador) { showError("Selecciona un trabajador."); return; }
+      }
+
+      let cliente = "";
+      const cSel = document.getElementById("clienteSel");
+      if (cSel.value === "_nuevo_") {
+        cliente = document.getElementById("nuevoClienteInput").value.trim();
+        if (!cliente) { showError("Ingresa el cliente."); return; }
+      } else {
+        cliente = cSel.value || "";
+      }
+
+      let trabajo = "";
+      const trSel = document.getElementById("trabajoSel");
+      if (trSel.value === "_nuevo_") {
+        trabajo = document.getElementById("nuevoTrabajoInput").value.trim();
+        if (!trabajo) { showError("Describe el trabajo."); return; }
+      } else {
+        trabajo = trSel.value || "";
+      }
+
+      const fecha = document.getElementById("fecha").value;
+      const entrada = document.getElementById("entrada").value;
+      const salida = document.getElementById("salida").value;
+      const almuerzo = document.getElementById("almuerzo").value;
+
+      if (!fecha) { showError("Selecciona una fecha."); return; }
+      if (!entrada || !salida) { showError("Ingresa entrada y salida."); return; }
+
+      const datos = {
+        action: "registrar",
+        trabajador,
+        fecha,
+        cliente,
+        trabajo,
+        entrada,
+        salida,
+        almuerzo
+      };
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(datos),
+        headers: { "Content-Type": "application/json" }
+      })
+        .then(res => res.json())
+        .then(out => {
+          if (out.success) {
+            success.style.display = "block";
+            resetCampos();
+            setTimeout(() => success.style.display = "none", 2000);
+          } else {
+            showError(out.error || "Error al guardar.");
+          }
+        })
+        .catch(err => {
+          showError("No se pudo conectar. ¿Estás conectado a internet?");
+          console.error(err);
+        });
+    }
+  </script>
+</body>
+</html>
