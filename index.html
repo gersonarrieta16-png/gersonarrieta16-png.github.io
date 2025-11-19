@@ -83,7 +83,7 @@
 
   <label>Trabajador:
     <select id="trabajadorSel" onchange="toggleNuevoTrabajador()">
-      <option value="">— Seleccionar —</option>
+      <option value="">— Cargando... —</option>
       <option value="_nuevo_">📝 Agregar nuevo</option>
     </select>
   </label>
@@ -122,7 +122,7 @@
 
   <label>Cliente:
     <select id="clienteSel" onchange="toggleNuevoCliente()">
-      <option value="">— Seleccionar —</option>
+      <option value="">— Cargando... —</option>
       <option value="_nuevo_">➕ Agregar nuevo</option>
     </select>
   </label>
@@ -132,7 +132,7 @@
 
   <label>Trabajo realizado:
     <select id="trabajoSel" onchange="toggleNuevoTrabajo()">
-      <option value="">— Seleccionar —</option>
+      <option value="">— Cargando... —</option>
       <option value="_nuevo_">➕ Agregar nuevo</option>
     </select>
   </label>
@@ -146,34 +146,37 @@
   <div id="msgError" class="message error"></div>
 
   <script>
-    // 🔴 🔴 🔴 IMPORTANTE: Reemplaza esta URL por la de TU implementación de Apps Script
+    // 🔴 PON AQUÍ TU URL DE IMPLEMENTACIÓN DE APPS SCRIPT
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgWyQhOmxUICUsqbDWzLbbow49AHnMs5Eq4MhiXtcW8_X-X2TX0TNSnYmvGw1bMieJ/exec";
 
-    // Establecer fecha de hoy
     window.onload = function () {
       const hoy = new Date();
       document.getElementById("fecha").value = hoy.toISOString().substring(0, 10);
       cargarListasIniciales();
     };
 
-    // Cargar listas al iniciar (opcional: si quieres que cargue trabajadores/clientes al abrir)
     function cargarListasIniciales() {
       fetch(SCRIPT_URL + "?action=getLists")
-        .then(res => res.json())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+          }
+          return response.json();
+        })
         .then(data => {
-          if (data.error) return;
+          if (data.error) {
+            showError("Error al cargar listas: " + data.error);
+            return;
+          }
+
           const tSel = document.getElementById("trabajadorSel");
           const cSel = document.getElementById("clienteSel");
           const trSel = document.getElementById("trabajoSel");
 
-          // Mantener las opciones base
-          const tHTML = tSel.innerHTML;
-          const cHTML = cSel.innerHTML;
-          const trHTML = trSel.innerHTML;
-
-          tSel.innerHTML = tHTML;
-          cSel.innerHTML = cHTML;
-          trSel.innerHTML = trHTML;
+          // Limpiar y mantener las opciones base
+          tSel.innerHTML = '<option value="">— Seleccionar —</option><option value="_nuevo_">📝 Agregar nuevo</option>';
+          cSel.innerHTML = '<option value="">— Seleccionar —</option><option value="_nuevo_">➕ Agregar nuevo</option>';
+          trSel.innerHTML = '<option value="">— Seleccionar —</option><option value="_nuevo_">➕ Agregar nuevo</option>';
 
           data.trabajadores?.forEach(t => {
             const opt = document.createElement("option");
@@ -194,7 +197,10 @@
             trSel.appendChild(opt);
           });
         })
-        .catch(err => console.warn("No se pudieron cargar listas:", err));
+        .catch(err => {
+          showError("Error al cargar listas: " + err.message);
+          console.error(err);
+        });
     }
 
     function toggleNuevoTrabajador() {
@@ -289,24 +295,26 @@
         body: JSON.stringify(datos),
         headers: { "Content-Type": "application/json" }
       })
-        .then(res => res.json())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+          }
+          return response.json();
+        })
         .then(out => {
           if (out.success) {
             success.style.display = "block";
             resetCampos();
             setTimeout(() => success.style.display = "none", 2000);
           } else {
-            showError(out.error || "Error al guardar.");
+            showError("Error al guardar: " + (out.error || "Error desconocido"));
           }
         })
         .catch(err => {
-          showError("No se pudo conectar. ¿Estás conectado a internet?");
+          showError("Error al guardar: " + err.message);
           console.error(err);
         });
     }
   </script>
 </body>
 </html>
-
-
-
